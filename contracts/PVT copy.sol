@@ -2,16 +2,16 @@
 pragma solidity ^0.8.9;
 
 // Importing required modules and interfaces
-import '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol';
-import '@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol';
-import '@openzeppelin/contracts/utils/Counters.sol';
-import './interfaces/IATON.sol';
-import './interfaces/IVAULT.sol';
-import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import './libraries/EventsLib.sol';
-import './libraries/NFTcategories.sol';
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "./interfaces/IATON.sol";
+import "./interfaces/IVAULT.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./libraries/EventsLib.sol";
+import "./libraries/NFTcategories.sol";
 
 contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     // Define constant for percentage denominator, likely used for conversion or normalization
@@ -75,8 +75,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     uint256 private totalPowerSupply;
 
     // Mapping to store the last accumulated commission per token for each player
-    mapping(address => uint256) private lastAccumulatedCommissionPerTokenForPlayerATON;
-    mapping(address => uint256) private lastAccumulatedCommissionPerTokenForPlayerVUND;
+    mapping(address => uint256)
+        private lastAccumulatedCommissionPerTokenForPlayerATON;
+    mapping(address => uint256)
+        private lastAccumulatedCommissionPerTokenForPlayerVUND;
 
     uint256 private accumulatedCommissionPerTokenVUND;
     uint256 private accumulatedCommissionPerTokenATON;
@@ -91,7 +93,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         uint64 _subscriptionId,
         bytes32 _gasLane,
         uint16 _callbackGasLimit
-    ) VRFConsumerBaseV2(_vrfCoordinatorV2) ERC721('Vault Aton NFT Collection', 'PVT') {
+    )
+        VRFConsumerBaseV2(_vrfCoordinatorV2)
+        ERC721("Vault Aton NFT Collection", "PVT")
+    {
         VAULT = IVAULT(_VAULT);
         ATON = IATON(_ATON);
         vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
@@ -103,15 +108,31 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     }
 
     // #region  REC721 tokens Uris
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721URIStorage) returns (bool) {
+    /**
+     * @title Supports Interface Function
+     * @dev Determines if the contract implements a specific interface and thus can be considered as conforming to that interface.
+     * This function overrides the supportsInterface function in ERC721URIStorage.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return bool True if the contract supports the interface, false otherwise.
+     */
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721URIStorage) returns (bool) {
         return ERC721URIStorage.supportsInterface(interfaceId);
     }
 
+    /**
+     * @title Contract URI Retrieval
+     * @dev Retrieves the URI for the contract's metadata. This metadata typically includes information about the collection.
+     * @return string memory The URI of the contract's metadata.
+     */
     function contractURI() public view returns (string memory) {
         return contractURI_;
     }
 
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(
+        uint256 tokenId
+    ) public view virtual override returns (string memory) {
         // Ensure the token has been minted.
         _requireMinted(tokenId);
 
@@ -119,16 +140,33 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         bool staked = (ownerOf(tokenId) == address(this));
 
         // Fetch the URI using the token's traits.
-        string memory uri = uriCode[AStructs.encodeTrait(category[tokenId], quality[tokenId], staked, charged[tokenId])];
+        string memory uri = uriCode[
+            AStructs.encodeTrait(
+                category[tokenId],
+                quality[tokenId],
+                staked,
+                charged[tokenId]
+            )
+        ];
 
         // If the URI is non-empty, return it. Otherwise, return an empty string.
-        return bytes(uri).length > 0 ? uri : '';
+        return bytes(uri).length > 0 ? uri : "";
     }
 
     function addUris(AStructs.traitsUpload[] memory traits) external onlyOwner {
         for (uint8 i = 0; i < traits.length; i++) {
-            uriCode[AStructs.encodeTrait(traits[i].category, traits[i].quality, traits[i].staked, traits[i].charged)] = traits[i].uri;
-            if (traits[i].category == NFTcategories.Atovix && traits[i].quality + 1 > atovixTypes) {
+            uriCode[
+                AStructs.encodeTrait(
+                    traits[i].category,
+                    traits[i].quality,
+                    traits[i].staked,
+                    traits[i].charged
+                )
+            ] = traits[i].uri;
+            if (
+                traits[i].category == NFTcategories.Atovix &&
+                traits[i].quality + 1 > atovixTypes
+            ) {
                 atovixTypes = traits[i].quality + 1;
             }
         }
@@ -143,7 +181,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     // #region Mint + ChainLink +(Stake)
 
     function mintAtovix(uint16 _atovixIndex) external onlyOwner {
-        AStructs.traitsShort memory trait = AStructs.traitsShort({category: NFTcategories.Atovix, quality: _atovixIndex});
+        AStructs.traitsShort memory trait = AStructs.traitsShort({
+            category: NFTcategories.Atovix,
+            quality: _atovixIndex
+        });
         _mintNFT(msg.sender, trait);
     }
 
@@ -161,7 +202,13 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
     function _mintRegularNft() internal returns (uint256 requestId) {
         // Request a random number from Chainlink VRF.
-        requestId = vrfCoordinator.requestRandomWords(gasLane, subscriptionId, REQUEST_CONFIRMATIONS, callbackGasLimit, 3);
+        requestId = vrfCoordinator.requestRandomWords(
+            gasLane,
+            subscriptionId,
+            REQUEST_CONFIRMATIONS,
+            callbackGasLimit,
+            3
+        );
 
         // Map the requestId to the sender's address for future reference.
         requestIdToSender[requestId] = msg.sender;
@@ -171,7 +218,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         emit EventsLib.NftRequested(requestId, msg.sender);
     }
 
-    function _mintNFT(address _player, AStructs.traitsShort memory _trait) internal {
+    function _mintNFT(
+        address _player,
+        AStructs.traitsShort memory _trait
+    ) internal {
         tokenCounter += 1;
 
         // Mint the NFT and record its attributes
@@ -187,18 +237,26 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         emit EventsLib.NftMinted(_trait, _player);
     }
 
-    function fuseNFT(uint256[3] memory _tokenIdsFuse) external nonReentrant returns (bool) {
+    function fuseNFT(
+        uint256[3] memory _tokenIdsFuse
+    ) external nonReentrant returns (bool) {
         // Validate that the caller is the rightful owner of the NFTs and obtain their shared quality.
         uint16 commonQuality = _validateOwnershipAndGetQuality(_tokenIdsFuse);
 
         bool isCharged = false;
         uint8 category_ = category[_tokenIdsFuse[0]];
-        if (category_ == NFTcategories.AtonTicket || category_ == NFTcategories.Pixel) {
+        if (
+            category_ == NFTcategories.AtonTicket ||
+            category_ == NFTcategories.Pixel
+        ) {
             isCharged = true;
         }
 
         // Construct the attributes for the superior quality NFT that's to be minted for the caller.
-        AStructs.traitsShort memory trait = AStructs.traitsShort({category: category_, quality: commonQuality + 1});
+        AStructs.traitsShort memory trait = AStructs.traitsShort({
+            category: category_,
+            quality: commonQuality + 1
+        });
         _checkMaxQuality(category_, commonQuality + 1);
 
         // Proceed with the minting of the enhanced NFT for the caller.
@@ -231,7 +289,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return true; // Denote successful fusion.
     }
 
-    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+    function fulfillRandomWords(
+        uint256 requestId,
+        uint256[] memory randomWords
+    ) internal override {
         uint16 qualityFound; // Holds the determined quality of the NFT.
         uint8 categoryFound; // Holds the determined category of the NFT.
 
@@ -240,27 +301,42 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
         // Determine NFT attributes based on its type.
         if (isRequestChest_) {
-            categoryFound = _getChestCategoryFromRng(randomWords[0] % MAX_CATEGORY_CHANCE);
+            categoryFound = _getChestCategoryFromRng(
+                randomWords[0] % MAX_CATEGORY_CHANCE
+            );
             if (categoryFound == NFTcategories.Atovix) {
                 // Is Atovix
-                qualityFound = uint16(((randomWords[1] % stakesAtovix[requestIdToSender[requestId]].length) + 1));
+                qualityFound = uint16(
+                    ((randomWords[1] %
+                        stakesAtovix[requestIdToSender[requestId]].length) + 1)
+                );
             } else {
                 qualityFound = _getQualityFromRng(
-                    randomWords[1] % _diceSize(maxQuality[NFTcategories.VUNDrocket]),
+                    randomWords[1] %
+                        _diceSize(maxQuality[NFTcategories.VUNDrocket]),
                     NFTcategories.VUNDrocket
                 );
             }
         } else {
             // Regular Mint
             // Logic to determine attributes for all other NFT types.
-            categoryFound = _getRegularCategoryFromRng(randomWords[0] % MAX_CATEGORY_CHANCE);
+            categoryFound = _getRegularCategoryFromRng(
+                randomWords[0] % MAX_CATEGORY_CHANCE
+            );
 
             // Determine quality using the second random number.
-            qualityFound = _getQualityFromRng(randomWords[1] % _diceSize(maxQuality[NFTcategories.VUNDrocket]), categoryFound);
+            qualityFound = _getQualityFromRng(
+                randomWords[1] %
+                    _diceSize(maxQuality[NFTcategories.VUNDrocket]),
+                categoryFound
+            );
         }
 
         // Construct the NFT traits.
-        AStructs.traitsShort memory trait = AStructs.traitsShort({category: categoryFound, quality: qualityFound});
+        AStructs.traitsShort memory trait = AStructs.traitsShort({
+            category: categoryFound,
+            quality: qualityFound
+        });
         _checkMaxQuality(categoryFound, qualityFound);
 
         // Mint the NFT with determined traits and assign to the requester.
@@ -278,7 +354,7 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     function stakeNFT(uint256 _tokenId) external nonReentrant {
         AStructs.traitsFull memory traitsNew = _tokenInfo(_tokenId);
 
-        require(msg.sender == ownerOf(_tokenId), 'you dont own this token');
+        require(msg.sender == ownerOf(_tokenId), "you dont own this token");
 
         if (traitsNew.category == NFTcategories.TreasureChest) {
             _openTreasureChest(_tokenId);
@@ -294,11 +370,13 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
             uint256 indexToRemove = stakesArray[msg.sender].length;
             for (uint256 i = 0; i < stakesArray[msg.sender].length; i++) {
                 uint256 stakedTokenId = stakesArray[msg.sender][i];
-                AStructs.traitsFull memory traitsStaked = _tokenInfo(stakedTokenId);
+                AStructs.traitsFull memory traitsStaked = _tokenInfo(
+                    stakedTokenId
+                );
 
                 if (traitsStaked.category == traitsNew.category) {
                     if (traitsStaked.quality == traitsNew.quality) {
-                        revert('NFT Duplicate');
+                        revert("NFT Duplicate");
                     }
                     indexToRemove = i;
                     _unStakeNFT(stakedTokenId);
@@ -306,12 +384,17 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
                 }
             }
             if (indexToRemove < stakesArray[msg.sender].length) {
-                stakesArray[msg.sender][indexToRemove] = stakesArray[msg.sender][stakesArray[msg.sender].length - 1];
+                stakesArray[msg.sender][indexToRemove] = stakesArray[
+                    msg.sender
+                ][stakesArray[msg.sender].length - 1];
                 stakesArray[msg.sender].pop();
             }
 
             stakesHash[msg.sender][traitsNew.category] = _tokenId;
-            eventCount[_tokenId] = _getEventCount(msg.sender, traitsNew.category);
+            eventCount[_tokenId] = _getEventCount(
+                msg.sender,
+                traitsNew.category
+            );
         }
 
         _transfer(msg.sender, address(this), _tokenId);
@@ -324,7 +407,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     }
 
     function _unStakeNFT(uint256 _tokenId) internal {
-        uint256 indexGeneralStake = _findAndRemoveStake(_tokenId, stakesArray[msg.sender]);
+        uint256 indexGeneralStake = _findAndRemoveStake(
+            _tokenId,
+            stakesArray[msg.sender]
+        );
         uint256 indexAtovixStake = (category[_tokenId] == NFTcategories.Atovix)
             ? _findAndRemoveStake(_tokenId, stakesAtovix[msg.sender])
             : 0;
@@ -333,8 +419,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         require(
             address(this) == ownerOf(_tokenId) &&
                 indexGeneralStake != type(uint256).max &&
-                (category[_tokenId] != NFTcategories.Atovix || indexAtovixStake != type(uint256).max),
-            'Invalid ownership or staking status'
+                (category[_tokenId] != NFTcategories.Atovix ||
+                    indexAtovixStake != type(uint256).max),
+            "Invalid ownership or staking status"
         );
 
         // Reset the hash value associated with the staked NFT's category for the caller.
@@ -352,7 +439,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     function _popStakedNFT(address _player, uint256 index) internal {
         // If the NFT to remove isn't the last one in the list, move the last NFT to its position.
         if (index != stakesArray[_player].length - 1) {
-            stakesArray[_player][index] = stakesArray[_player][stakesArray[_player].length - 1];
+            stakesArray[_player][index] = stakesArray[_player][
+                stakesArray[_player].length - 1
+            ];
         }
 
         // Remove the last NFT (which is now either a duplicate or the one to be removed).
@@ -362,7 +451,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     function _popStakedAtovix(address _player, uint256 index) internal {
         // If the NFT to remove isn't the last one in the list, move the last NFT to its position.
         if (index != stakesAtovix[_player].length - 1) {
-            stakesAtovix[_player][index] = stakesAtovix[_player][stakesAtovix[_player].length - 1];
+            stakesAtovix[_player][index] = stakesAtovix[_player][
+                stakesAtovix[_player].length - 1
+            ];
         }
 
         // Remove the last NFT (which is now either a duplicate or the one to be removed).
@@ -380,25 +471,36 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return lvl;
     }
 
-    function getPlayerNftData(address _player) external view returns (AStructs.nftData[] memory) {
+    function getPlayerNftData(
+        address _player
+    ) external view returns (AStructs.nftData[] memory) {
         // Calculate the combined total of staked and owned NFTs for the player
-        uint256 totalLength = stakesArray[_player].length + _ownedTokens[_player].length;
+        uint256 totalLength = stakesArray[_player].length +
+            _ownedTokens[_player].length;
 
         // Initialize an array to hold the NFT data
-        AStructs.nftData[] memory nftDataArray = new AStructs.nftData[](totalLength);
+        AStructs.nftData[] memory nftDataArray = new AStructs.nftData[](
+            totalLength
+        );
 
         // Counter to track the current insertion position in nftDataArray
         uint256 currentIndex = 0;
 
         // Iterate through staked NFTs and populate their data in nftDataArray
         for (uint256 i = 0; i < stakesArray[_player].length; i++) {
-            nftDataArray[currentIndex] = AStructs.nftData({tokenId: stakesArray[_player][i], trait: _tokenInfo(stakesArray[_player][i])});
+            nftDataArray[currentIndex] = AStructs.nftData({
+                tokenId: stakesArray[_player][i],
+                trait: _tokenInfo(stakesArray[_player][i])
+            });
             currentIndex++;
         }
 
         // Iterate through owned NFTs and populate their data in nftDataArray
         for (uint256 i = 0; i < _ownedTokens[_player].length; i++) {
-            nftDataArray[currentIndex] = AStructs.nftData({tokenId: _ownedTokens[_player][i], trait: _tokenInfo(_ownedTokens[_player][i])});
+            nftDataArray[currentIndex] = AStructs.nftData({
+                tokenId: _ownedTokens[_player][i],
+                trait: _tokenInfo(_ownedTokens[_player][i])
+            });
             currentIndex++;
         }
 
@@ -406,7 +508,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return nftDataArray;
     }
 
-    function getPlayerStakedNFTs(address _player) external view returns (uint256[] memory) {
+    function getPlayerStakedNFTs(
+        address _player
+    ) external view returns (uint256[] memory) {
         return stakesArray[_player];
     }
 
@@ -418,9 +522,11 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return true;
     }
 
-    function _openTreasureChest(uint256 _tokenId) internal returns (uint256 requestId) {
+    function _openTreasureChest(
+        uint256 _tokenId
+    ) internal returns (uint256 requestId) {
         // Ensure the caller is the owner of the specified NFT
-        require(ownerOf(_tokenId) == msg.sender, 'You dont own this token');
+        require(ownerOf(_tokenId) == msg.sender, "You dont own this token");
         _updatePlayerPower(NFTcategories.TreasureChest, 1, msg.sender, false);
 
         // Burn the specified NFT, effectively "opening" the treasure chest
@@ -429,7 +535,13 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         // Request a random number from Chainlink VRF. The parameters for the VRF request,
         // such as the gas lane, subscription ID, confirmations required, and gas limit,
         // should be set elsewhere in the contract or be globally defined constants.
-        requestId = vrfCoordinator.requestRandomWords(gasLane, subscriptionId, REQUEST_CONFIRMATIONS, callbackGasLimit, 1);
+        requestId = vrfCoordinator.requestRandomWords(
+            gasLane,
+            subscriptionId,
+            REQUEST_CONFIRMATIONS,
+            callbackGasLimit,
+            1
+        );
 
         // Map the returned request ID to the sender's address, for tracking purposes
         requestIdToSender[requestId] = msg.sender;
@@ -443,24 +555,43 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
     function _openAtonticket(uint256 _tokenId) internal {
         // Ensure the NFT in question is an AtonTicket
-        require(category[_tokenId] == NFTcategories.AtonTicket && _ownerOf(_tokenId) == msg.sender, '_openAtonticket Error');
+        require(
+            category[_tokenId] == NFTcategories.AtonTicket &&
+                _ownerOf(_tokenId) == msg.sender,
+            "_openAtonticket Error"
+        );
 
         // Compute the base earnings for the pouch, this can be seen as the basic reward for opening it
 
         // Calculate the total earnings for the pouch based on its quality. Higher quality pouches yield more.
         // The formula indicates that the earnings exponentially increase with the quality of the pouch.
         uint16 _quality = quality[_tokenId];
-        uint256 earningsATON = _getVUNDtoATON(20 * 10 ** 18) * 6 ** (_quality - 1);
+        uint256 earningsATON = _getVUNDtoATON(20 * 10 ** 18) *
+            6 ** (_quality - 1);
 
         // Credit the computed earnings to the pouch owner. VAULT presumably is a contract or module responsible for player earnings.
-        VAULT.addEarningsToPlayer(msg.sender, 0, earningsATON, '', AStructs.AtonTicket);
-        _updatePlayerPower(NFTcategories.AtonTicket, _quality, msg.sender, false);
+        VAULT.addEarningsToPlayer(
+            msg.sender,
+            0,
+            earningsATON,
+            "",
+            AStructs.AtonTicket
+        );
+        _updatePlayerPower(
+            NFTcategories.AtonTicket,
+            _quality,
+            msg.sender,
+            false
+        );
 
         // Burn the pouch NFT to signify it's been opened and its rewards have been claimed.
         _burn(_tokenId);
     }
 
-    function _findAndRemoveStake(uint256 _tokenId, uint256[] storage stakeList) internal returns (uint256) {
+    function _findAndRemoveStake(
+        uint256 _tokenId,
+        uint256[] storage stakeList
+    ) internal returns (uint256) {
         for (uint256 i = 0; i < stakeList.length; i++) {
             if (_tokenId == stakeList[i]) {
                 // If the token is found, remove it by replacing it with the last token in the list and then shrinking the list size.
@@ -472,7 +603,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return type(uint256).max; // Return an "invalid" index to indicate the token was not found.
     }
 
-    function _validateOwnershipAndGetQuality(uint256[3] memory _tokenValIds) internal returns (uint16) {
+    function _validateOwnershipAndGetQuality(
+        uint256[3] memory _tokenValIds
+    ) internal returns (uint16) {
         uint16 initialQuality = quality[_tokenValIds[0]];
         uint16 initialCategory = category[_tokenValIds[0]];
         // bool[3] memory flag;
@@ -480,19 +613,25 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         // Check ownership, quality, category, and charge status in one iteration.
         for (uint256 i = 1; i < 3; i++) {
             if (
-                !((ownerOf(_tokenValIds[i]) == msg.sender || _isStakedByPlayer(_tokenValIds[i], msg.sender)) &&
+                !((ownerOf(_tokenValIds[i]) == msg.sender ||
+                    _isStakedByPlayer(_tokenValIds[i], msg.sender)) &&
                     quality[_tokenValIds[i]] == initialQuality &&
                     category[_tokenValIds[i]] == initialCategory &&
                     charged[_tokenValIds[i]] == true)
             ) {
-                revert('Validation failed: Ownership, quality, category, or charge');
+                revert(
+                    "Validation failed: Ownership, quality, category, or charge"
+                );
             }
         }
 
         return initialQuality;
     }
 
-    function _isStakedByPlayer(uint256 tokenId, address player) internal returns (bool) {
+    function _isStakedByPlayer(
+        uint256 tokenId,
+        address player
+    ) internal returns (bool) {
         // Loop through the array of staked NFTs for the player.
         for (uint256 j = 0; j < stakesArray[player].length; j++) {
             // If a match is found for the given tokenId...
@@ -512,7 +651,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return false;
     }
 
-    function _removeTokenFromOwnerEnumeration(address from, uint256 tokenId) private {
+    function _removeTokenFromOwnerEnumeration(
+        address from,
+        uint256 tokenId
+    ) private {
         // Get the index of the last token in the owner's list.
         uint256 lastTokenIndex = _ownedTokens[from].length - 1;
 
@@ -562,7 +704,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return sumWeights;
     }
 
-    function _buildQualityChanceArray(uint8 _category) internal view returns (uint256[] memory) {
+    function _buildQualityChanceArray(
+        uint8 _category
+    ) internal view returns (uint256[] memory) {
         uint256 _maxQuality = maxQuality[_category];
 
         uint256[] memory array = new uint256[](_maxQuality + 1);
@@ -581,9 +725,12 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
     // #endregion Mint + ChainLink +(Stake)
 
-    function _getRegularCategoryFromRng(uint256 categoryRng) internal pure returns (uint8) {
+    function _getRegularCategoryFromRng(
+        uint256 categoryRng
+    ) internal pure returns (uint8) {
         uint256 cumulativeSum = 0; // Initialize cumulative sum to 0.
-        uint256[32] memory categoryChanceArray = _getRegularChanceCategoryArray(); // Fetch the cumulative distribution array.
+        uint256[32]
+            memory categoryChanceArray = _getRegularChanceCategoryArray(); // Fetch the cumulative distribution array.
 
         // Ensure the categoryRng doesn't go beyond the length of categoryChanceArray.
         if (categoryRng > categoryChanceArray.length) {
@@ -595,7 +742,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
             // Check if the given random number lies between the last cumulative sum
             // and the current item in the array, which means the category has been identified.
-            if (categoryRng >= cumulativeSum && categoryRng < categoryChanceArray[i]) {
+            if (
+                categoryRng >= cumulativeSum &&
+                categoryRng < categoryChanceArray[i]
+            ) {
                 uint8 categoryFound = _getRegularCategoryIndex(i); // Fetch the category index based on the loop counter.
 
                 return categoryFound; // Return the determined category.
@@ -610,7 +760,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return 1;
     }
 
-    function _getChestCategoryFromRng(uint256 _categoryRng) internal view returns (uint8) {
+    function _getChestCategoryFromRng(
+        uint256 _categoryRng
+    ) internal view returns (uint8) {
         uint256 cumulativeSum = 0;
         uint256[4] memory categoryChanceArray = _chestChanceCategoryArray();
 
@@ -634,7 +786,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
             // If the provided random number lies between the previous cumulative sum
             // and the current value in the array, the category is found.
-            if (_categoryRng >= cumulativeSum && _categoryRng < categoryChanceArray[i]) {
+            if (
+                _categoryRng >= cumulativeSum &&
+                _categoryRng < categoryChanceArray[i]
+            ) {
                 uint8 categoryFound = _chestCategoryIndex(i); // Fetch the category index.
 
                 return categoryFound; // Return the identified category.
@@ -649,7 +804,11 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return 1; // Return the identified category.
     }
 
-    function _getRegularChanceCategoryArray() internal pure returns (uint256[32] memory) {
+    function _getRegularChanceCategoryArray()
+        internal
+        pure
+        returns (uint256[32] memory)
+    {
         uint256[32] memory categoryChanceArray;
 
         // Setting base chance for the first category.
@@ -667,7 +826,11 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return categoryChanceArray;
     }
 
-    function _chestChanceCategoryArray() internal pure returns (uint256[4] memory) {
+    function _chestChanceCategoryArray()
+        internal
+        pure
+        returns (uint256[4] memory)
+    {
         uint256[4] memory categoryChanceArray;
 
         // Base chance for the first category.
@@ -686,15 +849,26 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return categoryChanceArray;
     }
 
-    function getRegularChanceCategoryArray() external pure returns (uint256[32] memory) {
+    function getRegularChanceCategoryArray()
+        external
+        pure
+        returns (uint256[32] memory)
+    {
         return _getRegularChanceCategoryArray();
     }
 
-    function getChestChanceCategoryArray() external pure returns (uint256[4] memory) {
+    function getChestChanceCategoryArray()
+        external
+        pure
+        returns (uint256[4] memory)
+    {
         return _chestChanceCategoryArray();
     }
 
-    function _getQualityFromRng(uint256 _qualityRng, uint8 _category) public view returns (uint8) {
+    function _getQualityFromRng(
+        uint256 _qualityRng,
+        uint8 _category
+    ) public view returns (uint8) {
         // Retrieve the level of the NFT for the calling player.
         uint256 playerLuck = _getPlayerLuck(msg.sender);
 
@@ -718,7 +892,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         }
 
         // Build an array that defines the chances of each quality for the provided category.
-        uint256[] memory qualityChanceArray = _buildQualityChanceArray(_category);
+        uint256[] memory qualityChanceArray = _buildQualityChanceArray(
+            _category
+        );
 
         // Initialize a variable to store the found quality.
         uint8 qualityFound = 1;
@@ -728,7 +904,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
             // If we are not at the last quality chance in the array...
             if (i + 1 < qualityChanceArray.length) {
                 // Check if the random number falls between the current quality chance and the next one.
-                if (_qualityRng < qualityChanceArray[i] && _qualityRng > qualityChanceArray[i + 1]) {
+                if (
+                    _qualityRng < qualityChanceArray[i] &&
+                    _qualityRng > qualityChanceArray[i + 1]
+                ) {
                     qualityFound = i + 1; // Set the quality to the current index + 1.
                 }
             } else {
@@ -755,7 +934,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return tokenCounter;
     }
 
-    function _getEventCount(address _player, uint8 _category) internal view returns (uint256) {
+    function _getEventCount(
+        address _player,
+        uint8 _category
+    ) internal view returns (uint256) {
         if (_category < 90) {
             return VAULT.getEventCounter(_player, _category);
         } else {
@@ -763,7 +945,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         }
     }
 
-    function _isChargedToken(address _player, uint256 _tokenId) internal view returns (bool) {
+    function _isChargedToken(
+        address _player,
+        uint256 _tokenId
+    ) internal view returns (bool) {
         // Retrieve the final event count for the NFT's category and its owner.
         uint256 eventCountFinal = _getEventCount(_player, category[_tokenId]);
 
@@ -775,7 +960,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return false;
     }
 
-    function getBonus(address _player, uint8 _category) external view returns (uint16) {
+    function getBonus(
+        address _player,
+        uint8 _category
+    ) external view returns (uint16) {
         uint256 tokenId = stakesHash[_player][_category];
 
         if (tokenId > 0) {
@@ -791,11 +979,29 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
     // #region Comissions
 
-    function playerCommission(address _player) external view returns (uint256 unclaimedCommissionVUND, uint256 unclaimedCommissionATON) {
+    function playerCommission(
+        address _player
+    )
+        external
+        view
+        returns (
+            uint256 unclaimedCommissionVUND,
+            uint256 unclaimedCommissionATON
+        )
+    {
         return _playerCommission(_player);
     }
 
-    function _playerCommission(address _player) internal view returns (uint256 unclaimedCommissionVUND, uint256 unclaimedCommissionATON) {
+    function _playerCommission(
+        address _player
+    )
+        internal
+        view
+        returns (
+            uint256 unclaimedCommissionVUND,
+            uint256 unclaimedCommissionATON
+        )
+    {
         uint256 playerPowerValue = playerPower[_player];
         uint256 tokenUnit = 10 ** 18;
 
@@ -821,7 +1027,8 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         uint256 lastAccumulatedCommissionPerTokenForPlayer,
         uint256 tokenUnit
     ) private pure returns (uint256 unclaimedCommission) {
-        uint256 owedPerToken = accumulatedCommissionPerToken - lastAccumulatedCommissionPerTokenForPlayer;
+        uint256 owedPerToken = accumulatedCommissionPerToken -
+            lastAccumulatedCommissionPerTokenForPlayer;
         if (owedPerToken > 0) {
             unclaimedCommission = (playerPowerValue * owedPerToken) / tokenUnit;
         } else {
@@ -829,9 +1036,14 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         }
     }
 
-    function summary(address _player) external view returns (AStructs.summary memory) {
+    function summary(
+        address _player
+    ) external view returns (AStructs.summary memory) {
         //  Objetivo: Entregar un resumen de informacion del contrato de NFTs y del jugador
-        (uint256 unclaimedCommissionVUND, uint256 unclaimedCommissionATON) = _playerCommission(_player);
+        (
+            uint256 unclaimedCommissionVUND,
+            uint256 unclaimedCommissionATON
+        ) = _playerCommission(_player);
         AStructs.summary memory _summary = AStructs.summary({
             tokenCounter: tokenCounter,
             chestCount: chestCount,
@@ -850,13 +1062,20 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         return _summary;
     }
 
-    function _accumulateCommission(uint256 _newCommissionVUND, uint256 _newCommissionATON) internal {
+    function _accumulateCommission(
+        uint256 _newCommissionVUND,
+        uint256 _newCommissionATON
+    ) internal {
         // Calculate and update the commission per  power unit for VUND.
         // This will be used later to determine how much each player earns based on their power.
-        accumulatedCommissionPerTokenVUND += (_newCommissionVUND * (10 ** 18)) / totalPowerSupply;
+        accumulatedCommissionPerTokenVUND +=
+            (_newCommissionVUND * (10 ** 18)) /
+            totalPowerSupply;
 
         // Similarly, calculate and update the commission per power unit for ATON.
-        accumulatedCommissionPerTokenATON += (_newCommissionATON * (10 ** 18)) / totalPowerSupply;
+        accumulatedCommissionPerTokenATON +=
+            (_newCommissionATON * (10 ** 18)) /
+            totalPowerSupply;
 
         // Update the total commissions stored in the contract for both VUND and ATON.
         totalCommissionVUND += _newCommissionVUND;
@@ -873,7 +1092,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
     function _distributeCommission(address player) internal {
         // Fetch unclaimed commissions for both VUND and ATON
-        (uint256 unclaimedCommissionVUND, uint256 unclaimedCommissionATON) = _playerCommission(player);
+        (
+            uint256 unclaimedCommissionVUND,
+            uint256 unclaimedCommissionATON
+        ) = _playerCommission(player);
 
         // Distribute VUND commission if available
         if (unclaimedCommissionVUND > 0) {
@@ -886,26 +1108,55 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         }
 
         // Emit combined Earnings event after distributing both commissions
-        emit EventsLib.Earnings('', player, '', player, unclaimedCommissionVUND, unclaimedCommissionATON, AStructs.ComissionPower);
+        emit EventsLib.Earnings(
+            "",
+            player,
+            "",
+            player,
+            unclaimedCommissionVUND,
+            unclaimedCommissionATON,
+            AStructs.ComissionPower
+        );
     }
 
-    function _distributeVUNDCommission(address player, uint256 commission) internal {
+    function _distributeVUNDCommission(
+        address player,
+        uint256 commission
+    ) internal {
         // Transfer the commission directly, using a ternary operator to decide the recipient
-        VAULT.transfer(player == address(this) ? Ownable.owner() : player, commission);
+        VAULT.transfer(
+            player == address(this) ? Ownable.owner() : player,
+            commission
+        );
 
         // Update the last claimed commission for the player
-        lastAccumulatedCommissionPerTokenForPlayerVUND[player] = accumulatedCommissionPerTokenVUND;
+        lastAccumulatedCommissionPerTokenForPlayerVUND[
+            player
+        ] = accumulatedCommissionPerTokenVUND;
     }
 
-    function _distributeATONCommission(address player, uint256 commission) internal {
+    function _distributeATONCommission(
+        address player,
+        uint256 commission
+    ) internal {
         // Transfer the commission directly, using a ternary operator to decide the recipient
-        ATON.transfer(player == address(this) ? Ownable.owner() : player, commission);
+        ATON.transfer(
+            player == address(this) ? Ownable.owner() : player,
+            commission
+        );
 
         // Update the last claimed commission for the player
-        lastAccumulatedCommissionPerTokenForPlayerATON[player] = accumulatedCommissionPerTokenATON;
+        lastAccumulatedCommissionPerTokenForPlayerATON[
+            player
+        ] = accumulatedCommissionPerTokenATON;
     }
 
-    function _updatePlayerPower(uint8 _category, uint16 _quality, address _player, bool isAdd) internal {
+    function _updatePlayerPower(
+        uint8 _category,
+        uint16 _quality,
+        address _player,
+        bool isAdd
+    ) internal {
         _distributeCommission(_player);
         uint256 _unit;
 
@@ -922,7 +1173,10 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
                 _unit = previousPoints - newPoints;
             }
-        } else if (_category == NFTcategories.Pixel || _category == NFTcategories.AtonTicket) {
+        } else if (
+            _category == NFTcategories.Pixel ||
+            _category == NFTcategories.AtonTicket
+        ) {
             _unit = 2 * (2 ** _quality);
         } else if (_category == NFTcategories.VUNDrocket) {
             _unit = 3 * (2 ** _quality);
@@ -940,19 +1194,30 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         }
     }
 
-    function _payToken(uint256 _tokenAmount, address _player, bool isATON) internal {
+    function _payToken(
+        uint256 _tokenAmount,
+        address _player,
+        bool isATON
+    ) internal {
         // Perform the token transfer and accumulate commission, using a single require.
         require(
             (
                 isATON
                     ? ATON.transferFrom(_player, address(this), _tokenAmount)
-                    : IATON(address(VAULT)).transferFrom(_player, address(this), _tokenAmount)
+                    : IATON(address(VAULT)).transferFrom(
+                        _player,
+                        address(this),
+                        _tokenAmount
+                    )
             ),
-            'Token transfer failed'
+            "Token transfer failed"
         );
 
         // Accumulate commission based on the token type.
-        _accumulateCommission(isATON ? 0 : _tokenAmount / 2, isATON ? _tokenAmount : 0);
+        _accumulateCommission(
+            isATON ? 0 : _tokenAmount / 2,
+            isATON ? _tokenAmount : 0
+        );
         if (!isATON) {
             VAULT.donateVUND(_player, _tokenAmount / 2);
         }
@@ -962,14 +1227,29 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
 
     // #region Pixel
 
-    function paintPixel(uint128 x, uint128 y, uint8 _color) external nonReentrant {
+    function paintPixel(
+        uint128 x,
+        uint128 y,
+        uint8 _color
+    ) external nonReentrant {
         uint coordinates = AStructs.encodeCoordinates(x, y);
 
         // Merge the two require statements to validate coordinate boundaries and pixel color.
-        require(x <= canvasSize && y <= canvasSize && pixelsColor[coordinates] != _color, 'Invalid coordinates or same color');
+        require(
+            x <= canvasSize &&
+                y <= canvasSize &&
+                pixelsColor[coordinates] != _color,
+            "Invalid coordinates or same color"
+        );
 
         uint256 amountATON = _getVUNDtoATON(10 ** 18);
-        VAULT.addEarningsToPlayer(msg.sender, 0, amountATON, '', AStructs.PixelPaint);
+        VAULT.addEarningsToPlayer(
+            msg.sender,
+            0,
+            amountATON,
+            "",
+            AStructs.PixelPaint
+        );
 
         pixelsColor[coordinates] = _color;
         currentPaintedPixels[msg.sender] += 1;
@@ -983,12 +1263,18 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
                 landOwner,
                 0,
                 (amountATON * 1000000 * quality[tokenId]) / AStructs.pct_denom,
-                '',
+                "",
                 AStructs.PixelPaint
             );
             quality[tokenId] = _color;
         } else {
-            VAULT.addEarningsToPlayer(VAULT.getOwner(), 0, amountATON, '', AStructs.PixelPaint);
+            VAULT.addEarningsToPlayer(
+                VAULT.getOwner(),
+                0,
+                amountATON,
+                "",
+                AStructs.PixelPaint
+            );
         }
 
         if (lastPainter[coordinates] != address(0)) {
@@ -1000,7 +1286,11 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         emit EventsLib.PaintPixel(msg.sender, x, y, _color);
     }
 
-    function claimPixel(uint128 x, uint128 y, uint256 _newTokenId) external returns (bool) {
+    function claimPixel(
+        uint128 x,
+        uint128 y,
+        uint256 _newTokenId
+    ) external returns (bool) {
         uint coordinates = AStructs.encodeCoordinates(x, y);
 
         uint256 oldTokenId = pixelsTokenId[coordinates];
@@ -1010,40 +1300,62 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         } else if (quality[oldTokenId] < quality[_newTokenId]) {
             pixelsTokenId[coordinates] = _newTokenId;
         } else {
-            revert('Coordinate Already Claimed'); // If already claimed, revert the transaction
+            revert("Coordinate Already Claimed"); // If already claimed, revert the transaction
         }
         tokenIdCoordinates[_newTokenId] = coordinates;
-        emit EventsLib.ClaimPixel(oldTokenId, _newTokenId, x, y, quality[_newTokenId]);
+        emit EventsLib.ClaimPixel(
+            oldTokenId,
+            _newTokenId,
+            x,
+            y,
+            quality[_newTokenId]
+        );
         return true;
     }
 
-    function getPixelColors(uint256 page, uint256 perPage) external view returns (AStructs.PixelDTO[] memory) {
+    function getPixelColors(
+        uint256 page,
+        uint256 perPage
+    ) external view returns (AStructs.PixelDTO[] memory) {
         uint256 totalPixels = canvasSize * canvasSize;
         // Calculating starting index for pagination
         uint256 startIndex = (page - 1) * perPage;
 
         // Merge the require statements to validate input parameters and pagination range.
-        require(perPage > 0 && page >= 1 && startIndex < totalPixels, 'Invalid perPage, page number or page out of range');
+        require(
+            perPage > 0 && page >= 1 && startIndex < totalPixels,
+            "Invalid perPage, page number or page out of range"
+        );
 
         // Calculating ending index for pagination
-        uint256 endIndex = page * perPage > totalPixels ? totalPixels : page * perPage;
+        uint256 endIndex = page * perPage > totalPixels
+            ? totalPixels
+            : page * perPage;
 
         // Determine the size of the resultant pixel array
         uint256 resultSize = endIndex - startIndex;
-        AStructs.PixelDTO[] memory pixelArray = new AStructs.PixelDTO[](resultSize);
+        AStructs.PixelDTO[] memory pixelArray = new AStructs.PixelDTO[](
+            resultSize
+        );
 
         uint256 resultIndex = 0;
         for (uint256 i = startIndex; i < endIndex; i++) {
             uint256 x = i / canvasSize;
             uint256 y = i % canvasSize;
 
-            uint8 color = pixelsColor[AStructs.encodeCoordinates(uint128(x), uint128(y))];
+            uint8 color = pixelsColor[
+                AStructs.encodeCoordinates(uint128(x), uint128(y))
+            ];
             AStructs.PixelDTO memory pixel = AStructs.PixelDTO({
                 x: uint128(x),
                 y: uint128(y),
                 color: color,
-                tokenId: pixelsTokenId[AStructs.encodeCoordinates(uint128(x), uint128(y))],
-                painter: lastPainter[AStructs.encodeCoordinates(uint128(x), uint128(y))]
+                tokenId: pixelsTokenId[
+                    AStructs.encodeCoordinates(uint128(x), uint128(y))
+                ],
+                painter: lastPainter[
+                    AStructs.encodeCoordinates(uint128(x), uint128(y))
+                ]
             });
             pixelArray[resultIndex] = pixel;
             resultIndex++;
@@ -1076,7 +1388,11 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
     // #endregion Pixel
 
     //
-    function _transfer(address from, address to, uint256 tokenId) internal override {
+    function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
         uint8 _category = category[tokenId];
         uint16 _quality = quality[tokenId];
         // If the token isn't being minted, remove it from the sender's list of owned tokens.
@@ -1098,15 +1414,21 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         super._transfer(from, to, tokenId);
     }
 
-    function tokenInfo(uint256 tokenId) external view returns (AStructs.traitsFull memory) {
+    function tokenInfo(
+        uint256 tokenId
+    ) external view returns (AStructs.traitsFull memory) {
         return _tokenInfo(tokenId);
     }
 
-    function _tokenInfo(uint256 _tokenId) internal view returns (AStructs.traitsFull memory) {
+    function _tokenInfo(
+        uint256 _tokenId
+    ) internal view returns (AStructs.traitsFull memory) {
         // Retrieve category and quality of the NFT using its tokenId.
         uint8 _category = category[_tokenId];
         uint16 _quality = quality[_tokenId];
-        (uint128 x, uint128 y) = AStructs.decodeCoordinates(tokenIdCoordinates[_tokenId]);
+        (uint128 x, uint128 y) = AStructs.decodeCoordinates(
+            tokenIdCoordinates[_tokenId]
+        );
 
         // Check if the NFT is currently staked (owned by this contract).
         bool _staked = _ownerOf(_tokenId) == address(this);
@@ -1124,7 +1446,14 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
             AStructs.traitsFull({
                 category: _category,
                 quality: _quality,
-                uri: uriCode[AStructs.encodeTrait(_category, _quality, _staked, chargeThis)],
+                uri: uriCode[
+                    AStructs.encodeTrait(
+                        _category,
+                        _quality,
+                        _staked,
+                        chargeThis
+                    )
+                ],
                 staked: _staked,
                 charged: chargeThis,
                 color: pixelsColor[_tokenId],
@@ -1134,8 +1463,12 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
             });
     }
 
-    function _getVUNDtoATON(uint256 _amountVUND) internal view returns (uint256) {
-        return (_amountVUND * AStructs.pct_denom) / IATON(ATON).calculateFactorAton();
+    function _getVUNDtoATON(
+        uint256 _amountVUND
+    ) internal view returns (uint256) {
+        return
+            (_amountVUND * AStructs.pct_denom) /
+            IATON(ATON).calculateFactorAton();
     }
 
     function _addTokenToOwnerEnumeration(address to, uint256 tokenId) private {
@@ -1149,7 +1482,9 @@ contract PVT is ERC721URIStorage, VRFConsumerBaseV2, Ownable, ReentrancyGuard {
         }
     }
 
-    function tokensOfOwner(address owner) external view returns (uint256[] memory) {
+    function tokensOfOwner(
+        address owner
+    ) external view returns (uint256[] memory) {
         return _ownedTokens[owner];
     }
 }
